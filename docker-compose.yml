@@ -1,0 +1,171 @@
+services:
+  # --- HDFS NAMENODE ---
+  namenode:
+      image: cjj2010/hadoop:3.3.6
+      container_name: namenode
+      hostname: hdfs-namenode
+      ports: 
+        - "9870:9870"  # Interface Web HDFS
+        - "8088:8088"  # Interface Web ResourceManager
+      command: > 
+        bash -c "hdfs namenode & yarn resourcemanager"
+      networks:
+        - hadoop-spark-network
+
+  # --- HDFS DATANODE 1 ---
+  datanode1:
+    image: cjj2010/hadoop:3.3.6
+    container_name: datanode1
+    hostname: hdfs-datanode1
+    depends_on: 
+      - namenode
+    command: >
+      bash -c "hdfs datanode & yarn nodemanager"
+    ports:
+      - "9864:9864"
+    networks:
+      - hadoop-spark-network
+
+  # --- HDFS DATANODE 2 ---
+  datanode2:
+    image: cjj2010/hadoop:3.3.6
+    container_name: datanode2
+    hostname: hdfs-datanode2
+    depends_on: 
+      - namenode
+    command: >
+      bash -c "hdfs datanode & yarn nodemanager"
+    ports:
+      - "9865:9865"
+    networks:
+      - hadoop-spark-network
+
+  # --- HDFS SECONDARY NAMENODE ---
+  secondarynamenode:
+    image: cjj2010/hadoop:3.3.6
+    container_name: secondarynamenode
+    hostname: hdfs-secondarynamenode
+    depends_on:
+      - namenode
+    # pas besoin de lancer yarn pour celui ci dans la commande
+    command: >
+      bash -c "hdfs secondarynamenode"
+    networks:
+      - hadoop-spark-network
+
+  # --- HDFS CLIENT ---
+  # Définition d'un client pour automatiquement envoyer les logs sur HDFS
+  hdfs-client:
+    image: cjj2010/hadoop:3.3.6
+    container_name: hdfs-client
+    hostname: hdfs-client
+    depends_on:
+      - namenode
+      - datanode1
+      - datanode2
+    volumes:
+      - ./data:/data
+    command: >
+      bash -c "
+        echo '[HDFS-Client] Attente du démarrage du NameNode...';
+        sleep 30; 
+        echo '[HDFS-Client] Création du dossier et upload du fichier...';
+        hdfs dfs -mkdir /logs;
+        hdfs dfs -put /data/web_server.log /logs/;
+        echo '[HDFS-Client] Fichier web_server.log uploadé avec succès sur HDFS !';
+        echo '[HDFS-Client] Arrêt du client HDFS.';
+      "
+    networks:
+      - hadoop-spark-network
+
+
+  # --- SPARK MASTER ---
+  spark-master:
+    image: apache-spark:3.4.0
+    container_name: spark-master
+    ports:
+      - "8080:8080" # Interface Web Spark Master
+      - "7077:7077" # Port de connexion pour les jobs
+    environment:
+      - SPARK_LOCAL_IP=spark-master
+      - SPARK_WORKLOAD=master
+    volumes:
+      - ./apps:/opt/spark-apps  # dossier des scipts
+      - ./data:/opt/spark-data  # dossier des data
+    networks:
+      - hadoop-spark-network
+
+  # --- SPARK WORKER A ---
+  spark-worker-a:
+    image: apache-spark:3.4.0
+    container_name: spark-worker-a
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_LOCAL_IP=spark-worker-a
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_EXECUTOR_MEMORY=1G
+    volumes:
+      - ./apps:/opt/spark-apps # Le worker accède aussi aux apps
+      - ./data:/opt/spark-data # Le worker accède et aux données
+    networks:
+        - hadoop-spark-network
+
+  # --- SPARK WORKER B ---     
+  spark-worker-b:
+    image: apache-spark:3.4.0
+    container_name: spark-worker-b
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_WORKLOAD=worker
+      - SPARK_LOCAL_IP=spark-worker-b
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_EXECUTOR_MEMORY=1G
+    volumes:
+      - ./apps:/opt/spark-apps # Le worker accède aussi aux apps
+      - ./data:/opt/spark-data # Le worker accède et aux données
+    networks:
+      - hadoop-spark-network
+
+
+  # --- MONGODB ---
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb-container
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db  # volume bindé de la db
+    networks:
+        - hadoop-spark-network
+
+
+  # --- DATA GENERATOR ---
+  data-generator:
+    image: python:3.9
+    container_name: data-generator
+    volumes:
+      - ./data_generator:/app    # Le dossier du script
+      - ./data:/data             # Le dossier contenant web_server.log
+    working_dir: /app
+    command: python -u data_generator.py
+    ports:
+      - "9998:9998"              # Port local pour les tests du générateur
+    networks:
+        - hadoop-spark-network
+  
+
+volumes:
+  mongodb_data:  # volume de mongoDB
+
+
+networks:
+  hadoop-spark-network:
+    name: hadoop-spark-network
+    driver: bridge

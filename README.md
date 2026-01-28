@@ -60,10 +60,10 @@ Placez-vous dans le dossier du projet et utilisez le script d'installation fourn
 
 Vous pouvez bien sûr faire un `docker compose up -d`, mais vous devrez avant tout reconstruire l'image d'`apache-spark:3.4.0` utilisée ici à l'aide de la commande `docker build -t apache-spark:3.4.0 .`. Je ne saurais trop vous conseiller ensuite de monitorer l'envoi du fichier par le client à l'aide de `docker logs -f hdfs-client` avant de commencer toute analyse.
 
-Pour vérifier que le fichier `web_server.log` est bien sur HDFS, entrez la commande :
+Pour vérifier que le fichier `web_server.log` est bien sur HDFS (dans un dossier `logs` situé à la racine) entrez la commande :
 
 ```bash
-docker exec -it namenode hdfs dfs -ls /data
+docker exec -it namenode hdfs dfs -ls /logs
 ```
 
 ---
@@ -145,6 +145,9 @@ db.batch_top_ips.find()
 
 // Voir les erreurs détectées en temps réel (Stream)
 db.stream_errors.find()
+
+// Quitter le shell Mongo (ou Ctrl+D)
+exit()
 ```
 
 ## 🛑 Arrêt et nettoyage

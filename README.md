@@ -45,7 +45,7 @@ L'infrastructure déployée via `docker-compose` comprend:
 
 * [Docker](https://www.docker.com/products/docker-desktop/) & Docker Compose installés sur la machine hôte.
 * [Git LFS](https://git-lfs.com/) installé et initialisé avec git pour clôner le dépôt du projet avec le fichier `web_server.log`.
-* Assurez vous que le fichier `web_server.log` est présent dans le dossier `data/` du projet s'il n'est pas présent ou ne pèse pas 400 Mo environ, téléchargez le manuellement.
+* Assurez vous que le fichier `web_server.log` est présent dans le dossier `data/` du projet. S'il n'est pas présent ou ne pèse pas 400 Mo environ, téléchargez le manuellement.
 
 > **Note :** Si vous êtes sous Windows, je vous conseille vivement d'utiliser le [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/).
 

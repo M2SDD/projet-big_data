@@ -54,7 +54,7 @@ L'infrastructure déployée via `docker-compose` comprend:
 Clonez ce répertoire l'aide de la commande :
 
 ```bash
-git lfs clone https://github.com/M2SDD/projet-big_data.git
+git clone https://github.com/M2SDD/projet-big_data.git
 ```
 
 Placez-vous dans le dossier du projet et utilisez le script d'installation fourni. Il construit l'image de apache-spark:3.4.0, lance les conteneurs et charge automatiquement les données dans HDFS.

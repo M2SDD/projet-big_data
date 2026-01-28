@@ -6,6 +6,8 @@ Ce projet met en œuvre une architecture Big Data distribuée pour l'analyse de 
 
 ```text
 /projet-big_data
+  ├── Dockerfile                     # Dockerfile de l'image apache-spark:3.4.0 utilisée ici
+  ├── start-spark.sh                 # Script de démarage de spark utilisé dans le Dockerfile
   ├── docker-compose.yml             # Orchestration des conteneurs (Hadoop, Spark, Mongo)
   ├── install.sh                     # Script de lancement et d'initialisation
   ├── uninstall.sh                   # Script d'arrêt et de nettoyage
@@ -53,7 +55,7 @@ Placez-vous dans le dossier du projet et utilisez le script d'installation fourn
 
 > **Note :** Le script affiche les logs du client HDFS. Attendez de voir le message `[HDFS-Client] Fichier web_server.log uploadé avec succès sur HDFS !` avant de lancer les analyses.
 
-Vous pouvez bien sûr faire un `docker compose up -d`, mais je ne saurais trop vous conseiller de monitorer ensuite l'envoi du fichier par le client à l'aide de `docker logs -f hdfs-client` avant de commencer toute analyse.
+Vous pouvez bien sûr faire un `docker compose up -d`, mais vous devrez avant tout reconstruire l'image d'`apache-spark:3.4.0` utilisée ici à l'aide de la commande `docker build -t apache-spark:3.4.0 .`. Je ne saurais trop vous conseiller ensuite de monitorer l'envoi du fichier par le client à l'aide de `docker logs -f hdfs-client` avant de commencer toute analyse.
 
 Pour vérifier que le fichier `web_server.log` est bien sur HDFS, entrez la commande :
 

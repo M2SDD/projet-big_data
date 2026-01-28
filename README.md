@@ -8,6 +8,7 @@ Ce projet met en œuvre une architecture Big Data distribuée pour l'analyse de 
 /projet-big_data
   ├── Dockerfile                     # Dockerfile de l'image apache-spark:3.4.0 utilisée ici
   ├── start-spark.sh                 # Script de démarage de spark utilisé dans le Dockerfile
+  ├── start-defaults.conf            # Fichier de configuration pour le connecteur Spark-Mongo
   ├── docker-compose.yml             # Orchestration des conteneurs (Hadoop, Spark, Mongo)
   ├── install.sh                     # Script de lancement et d'initialisation
   ├── uninstall.sh                   # Script d'arrêt et de nettoyage
@@ -77,10 +78,10 @@ Ces jobs lisent le fichier stocké sur HDFS (`hdfs://namenode:9000/logs/web_serv
 Calcule la fréquence des codes HTTP (200, 404, 500...).
 
 ```bash
-docker exec -it spark-master /opt/spark/bin/spark-submit \
-  --packages org.mongodb.spark:mongo-spark-connector_2.12:10.1.1 \
+docker exec -it spark-master spark-submit \
   --py-files /opt/spark-apps/utils.py \
   --master spark://spark-master:7077 \
+  --name AnalyzeLogsCodesHTTP \
   /opt/spark-apps/batch_http_codes.py
 ```
 
@@ -88,10 +89,10 @@ docker exec -it spark-master /opt/spark/bin/spark-submit \
 Identifie les utilisateurs les plus actifs sur le site.
 
 ```bash
-docker exec -it spark-master /opt/spark/bin/spark-submit \
-  --packages org.mongodb.spark:mongo-spark-connector_2.12:10.1.1 \
+docker exec -it spark-master spark-submit \
   --py-files /opt/spark-apps/utils.py \
   --master spark://spark-master:7077 \
+  --name AnalyzeLogsTopIPs \
   /opt/spark-apps/batch_top_ips.py
 ```
 
@@ -100,9 +101,9 @@ docker exec -it spark-master /opt/spark/bin/spark-submit \
 Ce job écoute le `data-generator` sur le port 9998 et détecte les pics d'erreurs (404/500) par fenêtre de temps de 10 secondes.
 
 ```bash
-docker exec -it spark-master /opt/spark/bin/spark-submit \
-  --packages org.mongodb.spark:mongo-spark-connector_2.12:10.1.1 \
+docker exec -it spark-master spark-submit \
   --master spark://spark-master:7077 \
+  --name StreamErrorDetection \
   /opt/spark-apps/stream_error_detection.py
 ```
 Vous pouvez en même temps consulter les logs du `data-generator` via la commande :

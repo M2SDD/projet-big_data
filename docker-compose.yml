@@ -90,8 +90,9 @@ services:
       - SPARK_LOCAL_IP=spark-master
       - SPARK_WORKLOAD=master
     volumes:
-      - ./apps:/opt/spark-apps  # dossier des scipts
+      - ./apps:/opt/spark-apps  # dossier des scripts
       - ./data:/opt/spark-data  # dossier des data
+      - ./spark-defaults.conf:/opt/spark/conf/spark-defaults.conf # configuration du connecteur spark-mongo
     networks:
       - hadoop-spark-network
 
@@ -111,6 +112,7 @@ services:
     volumes:
       - ./apps:/opt/spark-apps # Le worker accède aussi aux apps
       - ./data:/opt/spark-data # Le worker accède et aux données
+      - ./spark-defaults.conf:/opt/spark/conf/spark-defaults.conf # configuration du connecteur spark-mongo
     networks:
         - hadoop-spark-network
 
@@ -130,6 +132,7 @@ services:
     volumes:
       - ./apps:/opt/spark-apps # Le worker accède aussi aux apps
       - ./data:/opt/spark-data # Le worker accède et aux données
+      - ./spark-defaults.conf:/opt/spark/conf/spark-defaults.conf # configuration du connecteur spark-mongo
     networks:
       - hadoop-spark-network
 

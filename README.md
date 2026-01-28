@@ -43,8 +43,9 @@ L'infrastructure déployée via `docker-compose` comprend:
 
 ### Prérequis
 
-* Docker & Docker Compose installés sur la machine.
-* Le fichier `web_server.log` doit être présent dans le dossier `data/` du projet.
+* [Docker](https://www.docker.com/products/docker-desktop/) & Docker Compose installés sur la machine hôte.
+* [Git LFS](https://git-lfs.com/) installé et initialisé avec git pour clôner le dépôt du projet avec le fichier `web_server.log`.
+* Assurez vous que le fichier `web_server.log` est présent dans le dossier `data/` du projet s'il n'est pas présent ou ne pèse pas 400 Mo environ, téléchargez le manuellement.
 
 > **Note :** Si vous êtes sous Windows, je vous conseille vivement d'utiliser le [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/).
 
@@ -53,7 +54,7 @@ L'infrastructure déployée via `docker-compose` comprend:
 Clonez ce répertoire l'aide de la commande :
 
 ```bash
-git clone https://github.com/M2SDD/projet-big_data.git
+git lfs clone https://github.com/M2SDD/projet-big_data.git
 ```
 
 Placez-vous dans le dossier du projet et utilisez le script d'installation fourni. Il construit l'image de apache-spark:3.4.0, lance les conteneurs et charge automatiquement les données dans HDFS.

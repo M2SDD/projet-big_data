@@ -46,6 +46,8 @@ L'infrastructure déployée via `docker-compose` comprend:
 * Docker & Docker Compose installés sur la machine.
 * Le fichier `web_server.log` doit être présent dans le dossier `data/` du projet.
 
+> **Note :** Si vous êtes sous Windows, je vous conseille vivement d'utiliser le [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/).
+
 ### Lancement Rapide
 
 Placez-vous dans le dossier du projet et utilisez le script d'installation fourni. Il lance les conteneurs et charge automatiquement les données dans HDFS.

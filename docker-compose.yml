@@ -1,4 +1,4 @@
-name: projet-big-data
+name: projet-big_data
 
 services:
   # --- HDFS NAMENODE ---

@@ -6,4 +6,4 @@ echo -e "\n"
 docker volume prune -f
 # suppression du volume nommé de mongodb
 echo -e "\n\nSupression du volume de MongoDB :"
-docker volume rm projet-big-data_mongodb_data
+docker volume rm projet-big_data_mongodb_data

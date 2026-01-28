@@ -1,3 +1,5 @@
+name: projet-big-data
+
 services:
   # --- HDFS NAMENODE ---
   namenode:
@@ -144,7 +146,7 @@ services:
     ports:
       - '27017:27017'
     volumes:
-      - mongodb_data:/data/db  # volume bindé de la db
+      - mongodb_data:/data/db  # volume nommé de la db
     networks:
         - hadoop-spark-network
 

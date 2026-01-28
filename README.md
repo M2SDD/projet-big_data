@@ -50,9 +50,16 @@ L'infrastructure déployée via `docker-compose` comprend:
 
 ### Lancement Rapide
 
-Placez-vous dans le dossier du projet et utilisez le script d'installation fourni. Il lance les conteneurs et charge automatiquement les données dans HDFS.
+Clonez ce répertoire l'aide de la commande :
 
 ```bash
+git clone https://github.com/M2SDD/projet-big_data.git
+```
+
+Placez-vous dans le dossier du projet et utilisez le script d'installation fourni. Il construit l'image de apache-spark:3.4.0, lance les conteneurs et charge automatiquement les données dans HDFS.
+
+```bash
+cd projet-big_data
 ./install.sh
 ```
 

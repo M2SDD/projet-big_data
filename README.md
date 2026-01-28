@@ -65,7 +65,13 @@ cd projet-big_data
 
 > **Note :** Le script affiche les logs du client HDFS. Attendez de voir le message `[HDFS-Client] Fichier web_server.log uploadé avec succès sur HDFS !` avant de lancer les analyses.
 
-Vous pouvez bien sûr faire un `docker compose up -d`, mais vous devrez avant tout reconstruire l'image d'`apache-spark:3.4.0` utilisée ici à l'aide de la commande `docker build -t apache-spark:3.4.0 .`. Je ne saurais trop vous conseiller ensuite de monitorer l'envoi du fichier par le client à l'aide de `docker logs -f hdfs-client` avant de commencer toute analyse.
+Vous pouvez bien sûr faire un `docker compose up -d`, mais vous devrez avant tout reconstruire l'image d'`apache-spark:3.4.0` utilisée ici à l'aide de la commande `docker build -t apache-spark:3.4.0 .`. Je ne saurais trop vous conseiller ensuite de monitorer l'envoi du fichier par le client à l'aide de `docker logs -f hdfs-client` avant de commencer toute analyse. Soit, dans l'ordre :
+
+```bash
+docker build -t apache-spark:3.4.0 .
+docker compose up -d
+docker logs -f hdfs-client
+```
 
 Pour vérifier que le fichier `web_server.log` est bien sur HDFS (dans un dossier `logs` situé à la racine) entrez la commande :
 

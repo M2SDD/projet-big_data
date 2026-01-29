@@ -6,16 +6,21 @@ def parse_log_line(line):
     Retourne None si la ligne ne correspond pas au format.
     """
     res = None
-    # Regex Log
-    log_pattern = r'^(?P<ip>\d+\.\d+\.\d+\.\d+) - - (?P<ts>\[(.*?)\]) "(?P<method>.*?) (?P<url>..*?) HTTP.*" (?P<code>\d+) (?P<size>\d+)'
+    # Regex Common Log Format (CLF)
+    log_pattern = r'^(?P<ip>\S+) (?P<logname>\S+) (?P<user>\S+) (?P<ts>\[(.*?)\]) '
+    log_pattern += r'"(?P<method>[A-Z]+) (?P<url>\S+) (?P<protocol>\S+)" '
+    log_pattern += r'(?P<code>\d{3}) (?P<size>\d+|-)$'
 
     match = re.search(log_pattern, line)
     if match:
         res =  {
             "ip": match.group('ip'),
+            "logname": match.group('logname'),
+            "user": match.group('user'),
             "timestamp": match.group('ts'),
             "method": match.group('method'),
             "url": match.group('url'),
+            "protocol": match.group('protocol'),
             "code": int(match.group('code')),
             "size": int(match.group('size'))
         }

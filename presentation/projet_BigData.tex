@@ -1,0 +1,385 @@
+\documentclass[aspectratio=169]{beamer}
+
+% --- PAQUETS ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,fit,backgrounds,calc}
+
+% --- THÈME ---
+\usetheme{Madrid}
+\usecolortheme{whale}
+
+% --- CONFIGURATION CODE ---
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\scriptsize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+% --- INFOS PRÉSENTATION ---
+\title[Big Data]{Mise en place d'une architecture distribuée\\pour l'analyse de logs web}
+\subtitle{HDFS, Batch, Streaming et NoSQL avec Docker}
+\author{Matthieu PELINGRE} 
+\institute{IDMC / M2SDD}
+\date{7 février 2026}
+
+\begin{document}
+
+% --- SLIDE 1: TITRE ---
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% --- SLIDE 2: PLAN ---
+\begin{frame}{Plan de la présentation}
+  \tableofcontents
+\end{frame}
+
+% --- SECTION 1: CONTEXTE ---
+\section{Contexte et objectifs}
+
+\begin{frame}{Contexte et problématique}
+  \begin{columns}
+    \column{0.6\textwidth}
+    \textbf{Scénario :}
+    \begin{itemize}
+        \item Site e-commerce (Cosmétiques).
+        \item Fort volume de trafic générant des logs serveurs (\texttt{web\_server.log}).
+    \end{itemize}
+    
+    \vspace{0.5cm}
+    \textbf{Besoin :}
+    \begin{itemize}
+        \item Transformer des données brutes en informations décisionnelles.
+        \item Besoin de scalabilité (Big Data) et de réactivité (Temps réel).
+    \end{itemize}
+
+    \column{0.4\textwidth}
+    \begin{alertblock}{Objectifs Techniques}
+        \begin{enumerate}
+            \item \textbf{Stocker} (HDFS).
+            \item \textbf{Traiter} (Spark Batch).
+            \item \textbf{Surveiller} (Spark Streaming).
+            \item \textbf{Persister} (MongoDB).
+        \end{enumerate}
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+% --- SECTION 2: ARCHITECTURE ---
+\section{Architecture technique}
+
+\begin{frame}{Architecture déployée (Docker)}
+    \begin{center}
+    \resizebox{\textwidth}{!}{
+    \begin{tikzpicture}[
+        node distance=1.5cm and 2cm,
+        box/.style={rectangle, draw, rounded corners, fill=blue!10, align=center, minimum height=1.2cm, minimum width=2.5cm, font=\footnotesize},
+        database/.style={cylinder, shape border rotate=90, draw, fill=green!10, aspect=0.25, align=center, minimum height=1.5cm, minimum width=1.5cm, font=\footnotesize},
+        source/.style={rectangle, draw, dashed, fill=yellow!10, align=center, minimum height=1cm, minimum width=2.5cm, font=\footnotesize},
+        arrow/.style={->, >=stealth, thick, color=black!70}
+    ]
+
+    % --- Row 1: Stream Flow ---
+    \node[source] (gen) {Générateur Python\\(socket stream)};
+    \node[box, right=of gen, fill=blue!20] (spark) {\textbf{Apache Spark}\\(Master + 2 Workers)};
+    \node[database, right=of spark, fill=orange!20] (mongo) {\textbf{MongoDB}\\(Logs DB)};
+
+    % --- Row 2: Batch Flow ---
+    \node[source, below=1.5cm of gen] (file) {Fichier Logs\\(données brutes)};
+    \node[database, right=of file] (hdfs) {\textbf{Hadoop HDFS}\\(NN + 2 DN)};
+
+    % --- Connections ---
+    % Stream path
+    \draw[arrow] (gen) -- node[above, font=\tiny, color=red] {TCP :9998} (spark);
+    \draw[arrow] (spark) -- node[above, font=\tiny] {Documents} (mongo);
+
+    % Batch path
+    \draw[arrow] (file) -- node[above, font=\tiny] {Upload (Client)} (hdfs);
+    \draw[arrow] (hdfs) -- node[right, font=\tiny, pos=0.4] {Lecture Batch} (spark);
+
+    % --- Grouping ---
+    \begin{pgfonlayer}{background}
+        \node[fit=(spark) (hdfs) (mongo), draw, dashed, red!50, fill=red!5, inner sep=0.5cm, rounded corners, label={[anchor=south east, red, font=\scriptsize]south east:Network}] {};
+    \end{pgfonlayer}
+
+    \end{tikzpicture}
+    }
+    \end{center}
+\end{frame}
+
+\begin{frame}{Stratégie d'ingestion \& développement}
+  \begin{block}{Automatisation}
+    \begin{itemize}
+        \item \textbf{Batch :} conteneur \texttt{hdfs-client} éphémère. Attend la fin du démarrage du NameNode, puis téléverse les données.
+        \item \textbf{Stream :} service \texttt{data-generator} résilient (boucle infinie + reconnexion automatique).
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Qualité de code}
+    \begin{itemize}
+        \item Création d'un module \texttt{utils.py} partagé.
+        \item Centralise la logique de parsing : Regex pour CLF (\textit{Common Log Format}).
+        \item Distribué aux workers via l'option \texttt{--py-files}.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% --- SECTION 3: BATCH ---
+\section{Traitements Batch (le passé)}
+
+\begin{frame}[fragile]{Analyse Batch : méthodologie}
+    \textbf{Approche MapReduce avec PySpark}
+    \begin{itemize}
+        \item Lecture directe depuis HDFS : \texttt{hdfs://namenode:9000/...}
+        \item Parsing des lignes via \texttt{utils.parse\_log\_line()} $\rightarrow$ RDD
+    \end{itemize}
+    
+    \vspace{0.1cm}
+    
+    \begin{columns}[t]
+        \column{0.5\textwidth}
+        \textbf{A. Répartition codes HTTP}
+        \begin{itemize}
+            \item RDD en cache pour :
+            \begin{itemize}
+                \item Comptage total.
+                \item Comptage par code HTTP.
+            \end{itemize}
+            \item Conversion du RDD en DataFrame.
+            \item \textbf{Enrichissement :} Jointure avec descriptions.
+            \item Calcul de fréquence.
+            \item Sauvegarde MongoDB (overwrite).
+        \end{itemize}
+
+        \column{0.5\textwidth}
+        \textbf{B. Top 10 IPs}
+        \begin{itemize}
+            \item Comptage par adresse IP.
+            \item Utilisation de \texttt{takeOrdered(10)}.
+            \item Conversion du RDD en DataFrame.
+            \item Sauvegarde MongoDB (overwrite).
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Résultats Batch (codes HTTP)}
+    
+    \begin{exampleblock}{Affichage console (Master Spark)}
+\begin{lstlisting}[language=Bash]
+Demarrage du traitement Batch : AnalyzeLogsCodesHTTP
+Total des requetes analysees : 4369067
+Resultats : Frequence des codes HTTP
++----+------+-------------------------+---------+
+|code|count |description              |frequence|
++----+------+-------------------------+---------+
+|200 |874321|Succes de la requete     |0.2001   |
+|403 |874062|Acces refuse             |0.2001   |
+|404 |873765|Ressource non trouvee    |0.2      |
+|301 |873596|Redirection              |0.2      |
+|500 |873323|Erreur interne du serveur|0.1999   |
++----+------+-------------------------+---------+
+
+Sauvegarde dans la collection 'batch_http_codes'
+Traitement termine avec succes.
+\end{lstlisting}
+    \end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Résultats Batch (codes HTTP)}
+    
+    \begin{exampleblock}{Document stocké (batch\_http\_codes)}
+\begin{lstlisting}[language=Python]
+[
+  {
+    _id: ObjectId('697b70bcf6cb610c2cded206'),
+    code: 404,
+    count: 873765,
+    description: 'Ressource non trouvee',
+    frequence: 0.2
+  },
+  {
+    _id: ObjectId('697b70bcf6cb610c2cded207'),
+    code: 500,
+    count: 873323,
+    description: 'Erreur interne du serveur',
+    frequence: 0.1999
+  }, 
+...
+\end{lstlisting}
+    \end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Résultats Batch (top 10 IPs)}
+    
+    \begin{exampleblock}{Affichage console (Master Spark)}
+\begin{lstlisting}[language=Bash]
+Resultats : Top 10 des adresses IP les plus actives
++-------------+-----+
+|ip           |count|
++-------------+-----+
+|192.168.0.250|4620 |
+|192.168.1.52 |4571 |
+|192.168.1.243|4558 |
+|192.168.0.32 |4553 |
+|192.168.2.52 |4534 |
+|192.168.0.132|4531 |
+|192.168.3.82 |4529 |
+|192.168.3.154|4524 |
+|192.168.0.101|4522 |
+|192.168.1.49 |4521 |
++-------------+-----+
+
+Sauvegarde dans la collection 'batch_top_ips'
+\end{lstlisting}
+    \end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Résultats Batch (top 10 IPs)}
+    
+    \begin{exampleblock}{Document stocké (batch\_top\_ips)}
+\begin{lstlisting}[language=Python]
+[
+  {
+    _id: ObjectId('697b7107bdbce136d4f6d235'),
+    ip: '192.168.0.132',
+    count: 4531
+  },
+  {
+    _id: ObjectId('697b7107bdbce136d4f6d237'),
+    ip: '192.168.3.82',
+    count: 4529
+  },
+  {
+    _id: ObjectId('697b7107bdbce136d4f6d239'),
+    ip: '192.168.3.154',
+    count: 4524
+  },
+...
+\end{lstlisting}
+    \end{exampleblock}
+\end{frame}
+
+% --- SECTION 4: STREAMING ---
+\section{Traitements Streaming (le présent)}
+
+\begin{frame}{Analyse Streaming : le défi du temps réel}
+    \textbf{Génération :} Si un client se connecte au socket TCP, le \texttt{data-generator} lit en boucle le fichier de logs et envoie un a un les logs ayant le même timestamp. Il attend jusuq'au prochain timestamp et recommence jusqu'à déconnexion du client.
+    
+    \vspace{0.5cm}
+    \textbf{Objectif :} Détecter des pics d'erreurs (404/500) \textit{pendant} qu'ils se produisent.
+    
+    \begin{block}{Problématiques Big Data}
+    \begin{enumerate}
+        \item \textbf{Event Time :} Utiliser l'heure du log, pas l'heure de la machine.
+        \item \textbf{Données en retard :} Gérer les latences réseau.
+    \end{enumerate}
+    \end{block}
+    
+    \textbf{Solution :} Utilisation du \textbf{Watermarking} sur les timestamps des logs (tolérance de 1 min).
+\end{frame}
+
+\begin{frame}[fragile]{Fenêtrage et agrégation}
+    Utilisation de \textbf{Tumbling Windows} (Fenêtres glissantes) de 10s.
+    
+\begin{lstlisting}[language=Python]
+windowed_counts = errors_df \
+    .withWatermark("timestamp", "1 minute") \ 
+    .groupBy(
+        window(col("timestamp"), "10 seconds"),
+        col("code")
+    ) \
+    .count()
+\end{lstlisting}
+
+    Exemple : "Entre $15:19:50$ et $15:20:00$ $\rightarrow$ 1372 erreurs 500".
+\end{frame}
+
+\begin{frame}[fragile]{Analyse Streaming : méthodologie}
+
+    \begin{enumerate}
+        \item \textbf{Connexion} au socket TCP et récupération des données dans un \textbf{DataFrame}.
+        \item \textbf{Expression régulière} (Spark SQL) pour extraire le timestamp et le code HTTP.
+        \item \textbf{Filtre par code} HTTP (\texttt{"404"}, \texttt{"500"}).
+        \item \textbf{Watermarking} d'une minute pour les données en retard.
+        \item \textbf{Comptage} en regroupant les timestamps par tranche de 10s (pour tester) et par code.
+        \item Output mode : \textbf{UPDATE}.
+        \item Sauvegarde dans MongoDB (append).
+    \end{enumerate}
+ 
+\end{frame}
+
+\begin{frame}[fragile]{Stratégie d'écriture : UPSERT}
+    \textbf{Problème :} Éviter les doublons lors des mises à jour de fenêtres.
+    \vspace{0.1cm}
+    
+    \textbf{Solution :} \textbf{UPSERT} MongoDB avec clé composite. 
+    \vspace{0.1cm}
+    
+    \hspace{1cm}\textit{NB. On reste en UPDATE sur l'output Spark.}
+    
+\begin{lstlisting}[language=Python]
+.mode("append") \
+.option("operationType", "replace") \
+.option("idFieldList", "start_time,end_time,code")
+\end{lstlisting}
+
+    \begin{itemize}
+        \item \textbf{Clé unique :} début + fin + code HTTP.
+        \item Garantit la consistance des données.
+    \end{itemize}
+\end{frame}
+
+% --- SECTION 5: CONCLUSION ---
+\section{Bilan}
+
+\begin{frame}{Conclusion et perspectives}
+    \begin{columns}[t]
+        \column{0.5\textwidth}
+        \textbf{Bilan Technique :}
+        \begin{itemize}
+            \item[$\checkmark$] Architecture 100\% conteneurisée.
+            \item[$\checkmark$] Pipeline complet : ingestion $\rightarrow$ traitement $\rightarrow$ persistance.
+            \item[$\checkmark$] Problèmes de synchronisation et de doublons résolus.
+        \end{itemize}
+
+        \column{0.5\textwidth}
+        \textbf{Perspectives :}
+        \begin{itemize}
+            \item Tester sur des \textbf{données et flux réels}.
+            \item Remplacer le socket TCP par \textbf{Kafka}.
+            \item Connecter \textbf{Grafana} ou \textbf{Metabase} pour faire de la BI.
+        \end{itemize}
+    \end{columns}
+    
+    \vspace{1cm}
+    \begin{center}
+        \Large \textbf{Merci pour votre attention.} \\
+    \end{center}
+\end{frame}
+
+\end{document}
